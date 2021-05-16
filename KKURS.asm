@@ -20,9 +20,8 @@ STPOINT		EQU     $
 
 FOPER:          DS	6
 SOPER:          DS	6
-LENPAK		EQU	6
 TC		EQU 	46h
-NC		EQU 	10h
+NC		EQU 	0Dh
 EP		EQU	0FFh
 		DSEG	AT	8
 
@@ -55,11 +54,13 @@ START:
  		AJMP  	START ; vypolnenie programmy podachi signala
 
 PROG:
+		MOV	R2,#0		;GLOBAL
 	WAIT_PACK:
 		MOV 	R0,#FOPER
-		MOV	R7,#6
-		MOV 	R3,#0	;FOR START PACK BYTES COUNTER
-		MOV	R5,#0
+		MOV	R7,#6		;LOCAL 
+		MOV 	R3,#0		;LOCAL;FOR START PACK BYTES COUNTER
+		MOV	R5,#0		;LOCAL
+		INC	R2
 
 		GET_PACK:
 		CLR 	P1.7
@@ -76,6 +77,18 @@ PROG:
 		JMP 	END_PRG			;IF CONDITION FALSE, THEN START PACK HAS COME 
 		NOT_STRPACK:
 		DJNZ 	R7,GET_PACK
+
+	FPACK_TO_VT:
+		CALL 	NUMPACK
+		MOV	R0,#FOPER
+      		MOV	R7,#6
+		OUT_VT:
+		MOV	A,@R0
+		CALL	AHEX1
+		CALL	SPACE
+		INC	R0
+		DJNZ	R7,OUT_VT
+		CALL	CRLF1
 
 	CHCK_PACK:
 		MOV 	R1,#FOPER ;
@@ -101,11 +114,36 @@ PROG:
 		CALL 	ANSWER
 		MOV 	DPTR,#fndtxt
 		CALL 	TXTOUT
+
+	SPACK_TO_VT:
+		CALL 	NUMPACK
+		MOV	R0,#SOPER
+      		MOV	R7,#6
+		VT_OUT:
+		MOV	A,@R0
+		CALL	AHEX1
+		CALL 	SPACE
+		INC	R0
+		DJNZ	R7,VT_OUT
+		CALL	CRLF1
+
 		JMP	WAIT_PACK
 
 	END_PRG:
 	;
 	;DFQ
+	STPACK_TO_VT:
+		CALL 	NUMPACK
+		MOV	R0,#FOPER
+      		MOV	R7,#3
+		ST_OUT_VT:
+		MOV	A,@R0
+		CALL	AHEX1
+		CALL	SPACE
+		INC	R0
+		DJNZ	R7,ST_OUT_VT
+		CALL	CRLF1
+		
 		MOV	DPTR,#NDTXT
         	CALL	TXTOUT
 		JMP 	$
@@ -117,7 +155,7 @@ PROG:
 
 
 introtxt: 	DB	'Strt',0Ah,0Dh,2
-fndtxt: 	DB	'Fnd: F 13',0Ah,0Dh,2
+fndtxt: 	DB	'Fnd F 13: ',2
 ndtxt: 		DB	'Rcv cmt.Rn',0Ah,0Dh,2
 errtxt:		DB	'Err,wrong sw',0Ah,0Dh,2
 	; ---------------------------------------------------------
@@ -158,6 +196,14 @@ errtxt:		DB	'Err,wrong sw',0Ah,0Dh,2
 		SETB 	P1.6
 
 		RET
+
+	NUMPACK:
+		MOV 	A,R2
+		CALL 	AHEX1
+		MOV	A,#02Eh
+		CALL	VIVOD
+		
+		RET
 ;pp vor------------------------------------------------------------------------------------------------
 	VIVOD:
 		; драйвер вывода на терминал
@@ -165,6 +211,30 @@ errtxt:		DB	'Err,wrong sw',0Ah,0Dh,2
 		MOV	SBUF,A	; передача байта
 		JNB	TI,$	; ожидание флага "передача завершена"
 		CLR	TI	; очистка бита вручную	
+		RET
+	TXTOUT:
+	; dptr - адрес текста
+	; dst - A,F, r5
+		MOV	R6,#0
+
+		TXT_PRN1:
+		MOV	A,R6
+		MOVC	A,@A+DPTR
+		CJNE	A,#2,TXT_PRN2
+		RET
+		TXT_PRN2:
+		CALL	VIVOD
+		INC	R6
+		JMP	TXT_PRN1
+
+	SPACE:
+		MOV	A,#20H
+		CALL	VIVOD
+		RET
+		;cr_:
+	CRLF1:
+		MOV	A,#0DH
+		CALL	VIVOD
 		RET
 		
 	LOOP_BUF:
@@ -176,33 +246,6 @@ errtxt:		DB	'Err,wrong sw',0Ah,0Dh,2
 		CALL CRLF1
 
 		RET
-
-	SPACE:
-		MOV	A,#20H
-		CALL	VIVOD
-		RET
-		;cr_:
-	CRLF1:
-		MOV	A,#0DH
-		CALL	VIVOD
-		RET
-
-	TXTOUT:
-	; dptr - адрес текста
-	; dst - A,F, r5
-		MOV	R6,#0
-
-		TXT_PRN1:
-		MOV	A,R6
-		MOVC	A,@A+DPTR
-		CJNE	A,#2,TXT_PRN2
-		CALL 	CRLF1
-		RET
-		TXT_PRN2:
-		CALL	VIVOD
-		INC	R6
-		JMP	TXT_PRN1
-
 	AHEX1:
 ; ПП вывода hex-числа через SP на виртуальный терминал
 ; HEX-число в аккумуляторе
