@@ -21,7 +21,7 @@ STPOINT		EQU     $
 FOPER:          DS	6
 SOPER:          DS	6
 TC		EQU 	46h
-NC		EQU 	0Dh
+NC		EQU 	10h
 EP		EQU	0FFh
 		DSEG	AT	8
 
@@ -155,8 +155,8 @@ PROG:
 
 
 introtxt: 	DB	'Strt',0Ah,0Dh,2
-fndtxt: 	DB	'Fnd F 13: ',2
-ndtxt: 		DB	'Rcv cmt.Rn',0Ah,0Dh,2
+fndtxt: 	DB	'Find F 16: ',2
+ndtxt: 		DB	'The start package has arrived',0Ah,0Dh,2
 errtxt:		DB	'Err,wrong sw',0Ah,0Dh,2
 	; ---------------------------------------------------------
 	;                  подпрограммы
